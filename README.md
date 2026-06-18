@@ -29,5 +29,4 @@ assets/  lang/  src/  (engine: Mongo.php, Bson.php, Porter.php)
 app/                 bootstrap, helpers, auth, intercepts, actions, views, layout
 ```
 
-Same features and file structure as the main standalone build; only the PHP
-syntax is down-leveled.
+
