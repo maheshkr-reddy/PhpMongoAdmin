@@ -1,0 +1,9 @@
+{
+    "name": "mkreddy/phpmongoadmin",
+    "description": "phpMyAdmin-style MongoDB admin (standalone, BladeOne views).",
+    "type": "project",
+    "require": {
+        "ext-mongodb": "*",
+        "eftec/bladeone": "^3.52"
+    }
+}
