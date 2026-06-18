@@ -28,5 +28,9 @@ config.php           settings (URI, session, themes, languages, hidden_dbs)
 assets/  lang/  src/  (engine: Mongo.php, Bson.php, Porter.php)
 app/                 bootstrap, helpers, auth, intercepts, actions, views, layout
 ```
+## Demo ScreenShots
+<img width="1900" height="551" alt="phpmongoadmin_pic" src="https://github.com/user-attachments/assets/e4319cc0-dac6-40be-9ced-281d0cccbb73" />
+
+<img width="1612" height="469" alt="phpmongoadmin_pic2" src="https://github.com/user-attachments/assets/265868c0-67e3-4b38-b6b4-c6e15fb11ec0" />
 
 
