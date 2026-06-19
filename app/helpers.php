@@ -1,57 +1,54 @@
 <?php
 /** Helpers, i18n and small HTML fragments. */
 
-function t( $key)
+function t(string $key): string
 {
-    return (isset($GLOBALS['I18N'][$key]) ? $GLOBALS['I18N'][$key] : (((isset($GLOBALS['I18N_EN'][$key]) ? $GLOBALS['I18N_EN'][$key] : ($key)))));
+    return $GLOBALS['I18N'][$key] ?? ($GLOBALS['I18N_EN'][$key] ?? $key);
 }
 
-function e($v) { return htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'); }
+function e($v): string { return htmlspecialchars((string) $v, ENT_QUOTES, 'UTF-8'); }
 
-function url(array $params)
+function url(array $params): string
 {
     return '?' . http_build_query($params);
 }
 
-function csrf_token()
+function csrf_token(): string
 {
     if (empty($_SESSION['csrf'])) {
-        if (function_exists('random_bytes'))                  $b = random_bytes(16);
-        elseif (function_exists('openssl_random_pseudo_bytes')) $b = openssl_random_pseudo_bytes(16);
-        else { $b = ''; for ($i = 0; $i < 16; $i++) $b .= chr(mt_rand(0, 255)); }
-        $_SESSION['csrf'] = bin2hex($b);
+        $_SESSION['csrf'] = bin2hex(random_bytes(16));
     }
     return $_SESSION['csrf'];
 }
 
-function csrf_check()
+function csrf_check(): void
 {
-    $stored = (isset($_SESSION['csrf']) ? $_SESSION['csrf'] : (''));
-    $sent   = (isset($_POST['csrf']) ? $_POST['csrf'] : (''));
+    $stored = $_SESSION['csrf'] ?? '';
+    $sent   = $_POST['csrf'] ?? '';
     if ($stored === '' || !is_string($sent) || !hash_equals($stored, $sent)) {
         http_response_code(400);
         exit('Invalid CSRF token. Reload the page and try again.');
     }
 }
 
-function flash(?string $msg = null,  $type = 'success')
+function flash(?string $msg = null, string $type = 'success'): ?array
 {
     if ($msg !== null) {
         $_SESSION['flash'] = ['msg' => $msg, 'type' => $type];
         return null;
     }
-    $f = (isset($_SESSION['flash']) ? $_SESSION['flash'] : (null));
+    $f = $_SESSION['flash'] ?? null;
     unset($_SESSION['flash']);
     return $f;
 }
 
-function redirect(array $params)
+function redirect(array $params): void
 {
     header('Location: ' . url($params));
     exit;
 }
 
-function human_bytes($bytes)
+function human_bytes($bytes): string
 {
     $bytes = (float) $bytes;
     $units = ['B', 'KiB', 'MiB', 'GiB', 'TiB'];
@@ -60,7 +57,7 @@ function human_bytes($bytes)
     return round($bytes, $i ? 1 : 0) . ' ' . $units[$i];
 }
 
-function pretty_json( $json)
+function pretty_json(string $json): string
 {
     $decoded = json_decode($json);
     return json_last_error() === JSON_ERROR_NONE
@@ -68,14 +65,14 @@ function pretty_json( $json)
         : $json;
 }
 
-function web_server_string()
+function web_server_string(): string
 {
-    $s = (isset($_SERVER['SERVER_SOFTWARE']) ? $_SERVER['SERVER_SOFTWARE'] : (''));
+    $s = $_SERVER['SERVER_SOFTWARE'] ?? '';
     if ($s === '') $s = (PHP_SAPI === 'cli-server') ? 'PHP built-in server' : ('PHP ' . PHP_SAPI);
     return $s;
 }
 
-function mongo_client_version()
+function mongo_client_version(): string
 {
     $ext = phpversion('mongodb') ?: 'n/a';
     $libmongoc = '';
@@ -86,7 +83,7 @@ function mongo_client_version()
     return $libmongoc ? "mongodb $ext — libmongoc $libmongoc" : "mongodb $ext";
 }
 
-function php_extension_links()
+function php_extension_links(): string
 {
     $want = ['mongodb', 'curl', 'mbstring', 'openssl', 'zip', 'zlib', 'json', 'sodium'];
     $out  = [];
@@ -99,12 +96,12 @@ function php_extension_links()
     return $out ? implode('', $out) : '—';
 }
 
-function visible_db_names(array $names, array $hidden,  $keep = '')
+function visible_db_names(array $names, array $hidden, string $keep = ''): array
 {
     return array_values(array_filter($names, function($n) use ($keep, $hidden) { return $n === $keep || !in_array($n, $hidden, true); }));
 }
 
-function db_options(array $dbs,  $current = '')
+function db_options(array $dbs, string $current = ''): string
 {
     $o = '';
     foreach ($dbs as $d) {
@@ -113,7 +110,7 @@ function db_options(array $dbs,  $current = '')
     return $o;
 }
 
-function create_collection_form( $db)
+function create_collection_form(string $db): string
 {
     return '<form method="post" action="?">'
         . '<input type="hidden" name="do" value="create_collection">'
@@ -133,13 +130,13 @@ function create_collection_form( $db)
         . '<button type="submit">' . e(t('cc.create')) . '</button></form>';
 }
 
-function mongo_regex_quote( $s)
+function mongo_regex_quote(string $s): string
 {
     return preg_replace('/[.\\\\+*?\[^\]$(){}=!<>|:#\/-]/', '\\\\$0', $s);
 }
 
 /** Type a single "find by fields" value the way the Insert form does. */
-function ff_coerce( $s)
+function ff_coerce(string $s)
 {
     $t = trim($s);
     if ($t === '')      return '';
@@ -153,14 +150,14 @@ function ff_coerce( $s)
     return $s;
 }
 
-function search_build_filter(array $keys,  $input,  $mode)
+function search_build_filter(array $keys, string $input, string $mode): array
 {
     $keys = array_values(array_filter($keys, function($k) { return $k !== ''; }));
     if (!$keys) $keys = ['_id'];
     $input = trim($input);
     if ($input === '') return [];
 
-    $overFields = function (array $clause) use ($keys) {
+    $overFields = function (array $clause) use ($keys): array {
         $or = [];
         foreach ($keys as $k) $or[] = [$k => $clause];
         return ['$or' => $or];
@@ -181,7 +178,7 @@ function search_build_filter(array $keys,  $input,  $mode)
     return $mode === 'all' ? ['$and' => $clauses] : ['$or' => $clauses];
 }
 
-function mql_to_command( $text)
+function mql_to_command(string $text)
 {
     $t = trim($text);
     if ($t === '') throw new RuntimeException('Enter a query.');
@@ -214,7 +211,7 @@ function mql_to_command( $text)
     throw new RuntimeException('Could not parse the query. Use a command document like {"find":"coll","filter":{}} or shell style db.coll.find({}).');
 }
 
-function drop_button( $do, array $fields,  $confirm,  $label = 'Drop')
+function drop_button(string $do, array $fields, string $confirm, string $label = 'Drop'): string
 {
     $h = '<form method="post" action="?" class="inline confirm" data-confirm="' . e($confirm) . '">'
        . '<input type="hidden" name="do" value="' . e($do) . '">'
@@ -224,7 +221,7 @@ function drop_button( $do, array $fields,  $confirm,  $label = 'Drop')
     return $h;
 }
 
-function str_clip( $s,  $max = 80)
+function str_clip(string $s, int $max = 80): string
 {
     if (function_exists('mb_strlen')) {
         return mb_strlen($s) > $max ? mb_substr($s, 0, $max - 3) . '…' : $s;
@@ -232,7 +229,7 @@ function str_clip( $s,  $max = 80)
     return strlen($s) > $max ? substr($s, 0, $max - 3) . '…' : $s;
 }
 
-function cell_preview($value)
+function cell_preview($value): string
 {
     if ($value === null) return 'null';
     if (is_bool($value)) return $value ? 'true' : 'false';

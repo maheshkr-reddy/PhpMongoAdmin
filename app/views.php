@@ -1,16 +1,16 @@
 <?php
 /** Inner page views (one function per screen). */
 
-function view_home(Mongo $mongo, array $config, array $databases)
+function view_home(Mongo $mongo, array $config, array $databases): void
 {
     $info = $mongo->serverInfo();
     echo '<div class="panel"><h2>' . e(t('home.mongodb_server')) . '</h2><table class="kv">';
     $rows = [
-        t('home.host')           => (isset($info['host']) ? $info['host'] : ((parse_url($config['uri'], PHP_URL_HOST) ?: ''))),
-        t('home.server_version') => (isset($info['version']) ? $info['version'] : ('?')),
-        t('home.process')        => (isset($info['process']) ? $info['process'] : ('')),
+        t('home.host')           => $info['host'] ?? (parse_url($config['uri'], PHP_URL_HOST) ?: ''),
+        t('home.server_version') => $info['version'] ?? '?',
+        t('home.process')        => $info['process'] ?? '',
         t('home.uptime')         => isset($info['uptime']) ? gmdate('H:i:s', (int)$info['uptime']) . ' (' . (int)$info['uptime'] . 's)' : '—',
-        t('home.connections')    => (isset($info['connections']) ? $info['connections'] : ('—')),
+        t('home.connections')    => $info['connections'] ?? '—',
         t('home.max_bson')       => isset($info['maxBson']) ? human_bytes($info['maxBson']) : '—',
         t('home.driver')         => 'PHP ext-mongodb ' . (phpversion('mongodb') ?: 'n/a'),
     ];
@@ -45,7 +45,7 @@ function view_home(Mongo $mongo, array $config, array $databases)
     echo '<button type="submit">' . e(t('appear.apply')) . '</button>';
     echo '</form></div>';
 
-    $hidden  = (isset($config['hidden_dbs']) ? $config['hidden_dbs'] : ([]));
+    $hidden  = $config['hidden_dbs'] ?? [];
     $visible = array_values(array_filter($databases, function($d) use ($hidden) { return !in_array($d['name'], $hidden, true); }));
     echo '<div class="panel"><h2>' . e(t('home.databases')) . ' <span class="count">' . count($visible) . '</span></h2>';
     echo '<table class="grid"><thead><tr><th>' . e(t('home.database')) . '</th><th class="num">' . e(t('home.size_on_disk')) . '</th><th></th></tr></thead><tbody>';
@@ -57,7 +57,7 @@ function view_home(Mongo $mongo, array $config, array $databases)
     echo '</tbody></table></div>';
 }
 
-function view_database(Mongo $mongo,  $db)
+function view_database(Mongo $mongo, string $db): void
 {
     $collections = $mongo->listCollections($db);
 
@@ -104,9 +104,9 @@ function view_database(Mongo $mongo,  $db)
                 . '<td class="cbcol"><input type="checkbox" class="collcheck" data-name="' . e($c['name']) . '"></td>'
                 . '<td><a href="' . e(url($base + ['action' => 'browse'])) . '">▸ ' . e($c['name']) . '</a>'
                 . ($c['type'] === 'view' ? ' <span class="badge">view</span>' : '') . '</td>'
-                . '<td class="num">' . number_format((int)((isset($stats['count']) ? $stats['count'] : (0)))) . '</td>'
-                . '<td class="num">' . e(human_bytes((isset($stats['size']) ? $stats['size'] : (0)))) . '</td>'
-                . '<td class="num">' . (int)((isset($stats['nindexes']) ? $stats['nindexes'] : (0))) . '</td>'
+                . '<td class="num">' . number_format((int)($stats['count'] ?? 0)) . '</td>'
+                . '<td class="num">' . e(human_bytes($stats['size'] ?? 0)) . '</td>'
+                . '<td class="num">' . (int)($stats['nindexes'] ?? 0) . '</td>'
                 . '<td class="actions">'
                 . '<a class="mini" href="' . e(url($base + ['action' => 'browse'])) . '">' . e(t('btn.browse')) . '</a> '
                 . '<button type="button" class="mini coll-copy" data-name="' . e($c['name']) . '">' . e(t('csel.copy_btn')) . '</button> '
@@ -123,7 +123,7 @@ function view_database(Mongo $mongo,  $db)
     echo '<div class="panel"><h3>' . e(t('cc.title')) . '</h3>' . create_collection_form($db) . '</div>';
 }
 
-function view_db_operations(Mongo $mongo,  $db)
+function view_db_operations(Mongo $mongo, string $db): void
 {
     // (a) Create collection
     echo '<div class="panel ops"><h3>' . e(t('cc.title')) . '</h3>' . create_collection_form($db) . '</div>';
@@ -154,13 +154,13 @@ function view_db_operations(Mongo $mongo,  $db)
         . '</div>';
 }
 
-function view_db_privileges(Mongo $mongo,  $db)
+function view_db_privileges(Mongo $mongo, string $db): void
 {
     echo '<div class="panel"><h3>' . e(t('priv.title')) . '</h3>';
     $users = [];
     $err = '';
     try { $users = $mongo->listUsers($db); }
-    catch (Exception $e) { $err = $e->getMessage(); }
+    catch (Throwable $e) { $err = $e->getMessage(); }
 
     if (!$users) {
         echo '<p class="muted">' . e(t('priv.none')) . ($err ? ' <span class="muted">(' . e($err) . ')</span>' : '') . '</p>';
@@ -176,12 +176,12 @@ function view_db_privileges(Mongo $mongo,  $db)
     echo '</tbody></table><p class="hint">' . e(t('priv.hint')) . '</p></div>';
 }
 
-function view_db_search(Mongo $mongo,  $db)
+function view_db_search(Mongo $mongo, string $db): void
 {
     $colls   = $mongo->listCollections($db);
-    $words   = (isset($_GET['words']) ? $_GET['words'] : (''));
-    $mode    = (isset($_GET['mode']) ? $_GET['mode'] : ('substr'));
-    $picked  = (array) ((isset($_GET['collections']) ? $_GET['collections'] : ([])));
+    $words   = $_GET['words'] ?? '';
+    $mode    = $_GET['mode'] ?? 'substr';
+    $picked  = (array) ($_GET['collections'] ?? []);
     $ran     = isset($_GET['run']);
     $modes   = ['any' => 'search.mode_any', 'all' => 'search.mode_all', 'substr' => 'search.mode_substr',
                'whole' => 'search.mode_whole', 'regex' => 'search.mode_regex'];
@@ -220,7 +220,7 @@ function view_db_search(Mongo $mongo,  $db)
             $keys   = $mongo->topLevelKeys($db, $cName);
             $filter = search_build_filter($keys, $words, $mode);
             $count  = $mongo->count($db, $cName, $filter);
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             echo '<tr><td>' . e($cName) . '</td><td class="num muted">—</td><td class="muted">' . e($e->getMessage()) . '</td></tr>';
             continue;
         }
@@ -235,9 +235,9 @@ function view_db_search(Mongo $mongo,  $db)
     echo '</table></div>';
 }
 
-function view_mql(Mongo $mongo,  $db)
+function view_mql(Mongo $mongo, string $db): void
 {
-    $query = (isset($_POST['query']) ? $_POST['query'] : (''));
+    $query = $_POST['query'] ?? '';
     echo '<div class="panel"><h3>' . e(t('mql.title')) . ' <code>' . e($db) . '</code></h3>'
         . '<form method="post" action="' . e(url(['db' => $db, 'action' => 'mql'])) . '" class="mql-form">'
         . '<input type="hidden" name="do" value="mql_run">'
@@ -251,7 +251,7 @@ function view_mql(Mongo $mongo,  $db)
     try {
         $cmd  = mql_to_command($query);
         $rows = $mongo->command($db, $cmd);
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         echo '<div class="alert alert-error">' . e($e->getMessage()) . '</div>';
         return;
     }
@@ -264,10 +264,10 @@ function view_mql(Mongo $mongo,  $db)
     echo '</div>';
 }
 
-function view_browse(Mongo $mongo,  $db,  $coll, array $config)
+function view_browse(Mongo $mongo, string $db, string $coll, array $config): void
 {
-    $perPage = max(1, (int) ((isset($config['rows_per_page']) ? $config['rows_per_page'] : (25))));
-    $page    = max(1, (int) ((isset($_GET['page']) ? $_GET['page'] : (1))));
+    $perPage = max(1, (int) ($config['rows_per_page'] ?? 25));
+    $page    = max(1, (int) ($_GET['page'] ?? 1));
     $total   = $mongo->count($db, $coll);
     $pages   = max(1, (int) ceil($total / $perPage));
     $page    = min($page, $pages);
@@ -397,19 +397,19 @@ function view_browse(Mongo $mongo,  $db,  $coll, array $config)
     echo '</div>';
 }
 
-function view_find(Mongo $mongo,  $db,  $coll)
+function view_find(Mongo $mongo, string $db, string $coll): void
 {
-    $filter = (isset($_GET['filter']) ? $_GET['filter'] : ('{}'));
-    $sort   = (isset($_GET['sort']) ? $_GET['sort'] : (''));
-    $proj   = (isset($_GET['projection']) ? $_GET['projection'] : (''));
-    $limit  = (int) ((isset($_GET['limit']) ? $_GET['limit'] : (25)));
+    $filter = $_GET['filter']     ?? '{}';
+    $sort   = $_GET['sort']       ?? '';
+    $proj   = $_GET['projection'] ?? '';
+    $limit  = (int) ($_GET['limit'] ?? 25);
     $ran    = isset($_GET['run']);
-    $mode   = (((isset($_GET['fmode']) ? $_GET['fmode'] : (''))) === 'fields') ? 'fields' : 'json';
+    $mode   = (($_GET['fmode'] ?? '') === 'fields') ? 'fields' : 'json';
     try { $fields = array_values(array_filter($mongo->topLevelKeys($db, $coll), function($k) { return $k !== '_id'; })); }
-    catch (Exception $e) { $fields = []; }
+    catch (Throwable $e) { $fields = []; }
 
     // shared result renderer (used by both JSON and field search)
-    $render_results = function (array $docs) use ($db, $coll) {
+    $render_results = function (array $docs) use ($db, $coll): void {
         echo '<div class="panel"><div class="result-bar"><b>' . count($docs) . '</b> document(s) returned</div>';
         if (!$docs) { echo '<p class="muted">No matches.</p></div>'; return; }
         foreach ($docs as $d) {
@@ -452,16 +452,16 @@ function view_find(Mongo $mongo,  $db,  $coll)
             if (trim($proj) !== '') $opts['projection']  = Mongo::jsonToPhp($proj);
             $docs = $mongo->find($db, $coll, $filter ?: '{}', $opts);
             $render_results($docs);
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             echo '<div class="alert alert-error">Query error: ' . e($e->getMessage()) . '</div>';
         }
     }
     echo '</div>';   // end find subpanel
 
     // ---- Find by fields (tabular) ----
-    $ffield = (array) ((isset($_GET['ffield']) ? $_GET['ffield'] : ([])));
-    $fop    = (array) ((isset($_GET['fop']) ? $_GET['fop'] : ([])));
-    $fval   = (array) ((isset($_GET['fval']) ? $_GET['fval'] : ([])));
+    $ffield = (array) ($_GET['ffield'] ?? []);
+    $fop    = (array) ($_GET['fop'] ?? []);
+    $fval   = (array) ($_GET['fval'] ?? []);
     $ops = [
         'eq'     => '= equals',
         'ne'     => '&ne; not equal',
@@ -472,7 +472,7 @@ function view_find(Mongo $mongo,  $db,  $coll)
         'regex'  => e(t('find.contains')),
         'exists' => e(t('find.exists')),
     ];
-    $ffRow = function ( $field = '',  $op = 'eq',  $val = '') use ($ops) {
+    $ffRow = function (string $field = '', string $op = 'eq', string $val = '') use ($ops): string {
         $h = '<tr class="ff-row">'
            . '<td><input name="ffield[]" list="ff-fields" placeholder="field" value="' . e($field) . '"></td>'
            . '<td><select name="fop[]" aria-label="Operator">';
@@ -502,7 +502,7 @@ function view_find(Mongo $mongo,  $db,  $coll)
     $shown = 0;
     foreach ($ffield as $i => $fv) {
         if (trim((string) $fv) === '') continue;
-        echo $ffRow((string) $fv, (string) ((isset($fop[$i]) ? $fop[$i] : ('eq'))), (string) ((isset($fval[$i]) ? $fval[$i] : (''))));
+        echo $ffRow((string) $fv, (string) ($fop[$i] ?? 'eq'), (string) ($fval[$i] ?? ''));
         $shown++;
     }
     for ($i = $shown; $i < 3; $i++) echo $ffRow();
@@ -518,8 +518,8 @@ function view_find(Mongo $mongo,  $db,  $coll)
             foreach ($ffield as $i => $fv) {
                 $field = trim((string) $fv);
                 if ($field === '') continue;
-                $op  = (string) ((isset($fop[$i]) ? $fop[$i] : ('eq')));
-                $raw = (string) ((isset($fval[$i]) ? $fval[$i] : ('')));
+                $op  = (string) ($fop[$i] ?? 'eq');
+                $raw = (string) ($fval[$i] ?? '');
                 $tv  = ff_coerce($raw);
                 switch ($op) {
                     case 'ne':     $pairs[$field] = ['$ne'  => $tv]; break;
@@ -535,7 +535,7 @@ function view_find(Mongo $mongo,  $db,  $coll)
             $filterJson = $pairs ? json_encode($pairs, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE) : '{}';
             $docs = $mongo->find($db, $coll, $filterJson, ['limit' => max(1, min(1000, $limit))]);
             $render_results($docs);
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             echo '<div class="alert alert-error">Query error: ' . e($e->getMessage()) . '</div>';
         }
     }
@@ -565,11 +565,11 @@ function view_find(Mongo $mongo,  $db,  $coll)
     echo '</div></div>';   // end replace subpanel
 }
 
-function view_insert(Mongo $mongo,  $db,  $coll)
+function view_insert(Mongo $mongo, string $db, string $coll): void
 {
     // Suggest columns from existing documents (excluding _id, which auto-generates).
     try { $keys = $mongo->topLevelKeys($db, $coll); }
-    catch (Exception $e) { $keys = []; }
+    catch (Throwable $e) { $keys = []; }
     $fields = array_values(array_filter($keys, function($k) { return $k !== '_id'; }));
 
     // sub-tab bar
@@ -586,7 +586,7 @@ function view_insert(Mongo $mongo,  $db,  $coll)
         . '<input type="hidden" name="collection" value="' . e($coll) . '">'
         . '<input type="hidden" name="csrf" value="' . e(csrf_token()) . '">';
     echo '<table class="grid insert-grid"><thead><tr><th>' . e(t('ins.field')) . '</th><th>' . e(t('ins.value')) . '</th></tr></thead><tbody class="if-rows">';
-    $rowFn = function ( $name = '',  $known = false) {
+    $rowFn = function (string $name = '', bool $known = false): string {
         return '<tr class="if-row">'
             . '<td><input name="keys[]" value="' . e($name) . '"' . ($known ? ' readonly' : '') . ' placeholder="field"></td>'
             . '<td><input name="vals[]" placeholder="value" spellcheck="false"></td></tr>';
@@ -612,7 +612,7 @@ function view_insert(Mongo $mongo,  $db,  $coll)
         . '<button type="submit">' . e(t('ins.insert_btn')) . '</button></form></div></div>';
 }
 
-function view_edit(Mongo $mongo,  $db,  $coll,  $id)
+function view_edit(Mongo $mongo, string $db, string $coll, string $id): void
 {
     if ($id === '') { echo '<div class="alert alert-error">Missing document id.</div>'; return; }
     $doc = $mongo->findById($db, $coll, $id);
@@ -677,19 +677,19 @@ function view_edit(Mongo $mongo,  $db,  $coll,  $id)
         . '</form></div></div>';
 }
 
-function view_structure(Mongo $mongo,  $db,  $coll)
+function view_structure(Mongo $mongo, string $db, string $coll): void
 {
     $stats   = $mongo->collectionStats($db, $coll);
     $indexes = $mongo->listIndexes($db, $coll);
 
     echo '<div class="panel"><h3>Statistics</h3><table class="kv">';
     $rows = [
-        'Documents'        => number_format((int)((isset($stats['count']) ? $stats['count'] : (0)))),
-        'Data size'        => human_bytes((isset($stats['size']) ? $stats['size'] : (0))),
-        'Storage size'     => human_bytes((isset($stats['storageSize']) ? $stats['storageSize'] : (0))),
-        'Avg. document'    => human_bytes((isset($stats['avgObjSize']) ? $stats['avgObjSize'] : (0))),
-        'Indexes'          => (int)((isset($stats['nindexes']) ? $stats['nindexes'] : (0))),
-        'Total index size' => human_bytes((isset($stats['totalIndexSize']) ? $stats['totalIndexSize'] : (0))),
+        'Documents'        => number_format((int)($stats['count'] ?? 0)),
+        'Data size'        => human_bytes($stats['size'] ?? 0),
+        'Storage size'     => human_bytes($stats['storageSize'] ?? 0),
+        'Avg. document'    => human_bytes($stats['avgObjSize'] ?? 0),
+        'Indexes'          => (int)($stats['nindexes'] ?? 0),
+        'Total index size' => human_bytes($stats['totalIndexSize'] ?? 0),
     ];
     foreach ($rows as $k => $v) echo '<tr><th>' . e($k) . '</th><td>' . e((string)$v) . '</td></tr>';
     echo '</table></div>';
@@ -707,7 +707,7 @@ function view_structure(Mongo $mongo,  $db,  $coll)
             'Drop collection "' . $coll . '"?', 'Drop collection') . '</div>';
 }
 
-function view_operations(Mongo $mongo,  $db,  $coll)
+function view_operations(Mongo $mongo, string $db, string $coll): void
 {
     $dbs    = visible_db_names(array_map(function($d) { return $d['name']; }, $mongo->listDatabases()), $GLOBALS['HIDDEN_DBS'], $db);
     $fields = array_values(array_filter($mongo->topLevelKeys($db, $coll), function($k) { return $k !== '_id'; }));
@@ -772,7 +772,7 @@ function view_operations(Mongo $mongo,  $db,  $coll)
     echo '<button type="submit" class="danger-btn">' . e(t('ops.removecol_btn')) . '</button></form></div>';
 }
 
-function view_edit_multi(Mongo $mongo,  $db,  $coll, array $ids)
+function view_edit_multi(Mongo $mongo, string $db, string $coll, array $ids): void
 {
     $ids  = array_values(array_filter($ids, 'strlen'));
     $docs = $mongo->findByIds($db, $coll, $ids);
@@ -785,7 +785,7 @@ function view_edit_multi(Mongo $mongo,  $db,  $coll, array $ids)
         . '<input type="hidden" name="collection" value="' . e($coll) . '">'
         . '<input type="hidden" name="csrf" value="' . e(csrf_token()) . '">';
     foreach ($docs as $d) {
-        $idJson = (isset($d['id']) ? $d['id'] : (''));
+        $idJson = $d['id'] ?? '';
         echo '<label><code>_id</code> = ' . e($idJson) . '</label>'
             . '<input type="hidden" name="ids[]" value="' . e($idJson) . '">'
             . '<textarea name="docs[]" rows="10" spellcheck="false" class="code">' . e(pretty_json($d['json'])) . '</textarea>';
@@ -795,7 +795,7 @@ function view_edit_multi(Mongo $mongo,  $db,  $coll, array $ids)
         . '</form></div>';
 }
 
-function view_export(Mongo $mongo,  $db,  $coll = '')
+function view_export(Mongo $mongo, string $db, string $coll = ''): void
 {
     $formatSelect = '<select name="format">'
         . '<option value="json">JSON array (Extended JSON)</option>'
@@ -841,7 +841,7 @@ function view_export(Mongo $mongo,  $db,  $coll = '')
         . '<button type="submit">⬇ ' . e(t('export.button')) . '</button></form></div>';
 }
 
-function view_import(Mongo $mongo,  $db,  $coll = '')
+function view_import(Mongo $mongo, string $db, string $coll = ''): void
 {
     $hasZip  = class_exists('ZipArchive');
     $hasZlib = function_exists('gzdecode');

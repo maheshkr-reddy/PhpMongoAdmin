@@ -1,11 +1,11 @@
 <?php
 /** Page chrome: layout, sidebar, tabs, breadcrumb, login/fatal/print pages. */
 
-function print_page_body(array $config, Mongo $mongo,  $db, array $colls)
+function print_page_body(array $config, Mongo $mongo, string $db, array $colls): void
 {
     $colls = array_values(array_filter($colls, 'strlen'));
     $cap = 200;
-    ?><!doctype html><html lang="<?= e((isset($GLOBALS['LANG']) ? $GLOBALS['LANG'] : ('en'))) ?>"><head>
+    ?><!doctype html><html lang="<?= e($GLOBALS['LANG'] ?? 'en') ?>"><head>
     <meta charset="utf-8"><title><?= e($config['app_name']) ?> — <?= e($db) ?></title>
     <style>
       body{font:13px/1.45 -apple-system,Segoe UI,Roboto,Arial,sans-serif;color:#111;margin:24px}
@@ -28,7 +28,7 @@ function print_page_body(array $config, Mongo $mongo,  $db, array $colls)
             $total = $mongo->count($db, $cName);
             $keys  = $mongo->topLevelKeys($db, $cName) ?: ['_id'];
             $docs  = $mongo->find($db, $cName, [], ['limit' => $cap]);
-        } catch (Exception $e) {
+        } catch (Throwable $e) {
             echo '<h2>' . e($db) . '.' . e($cName) . '</h2><p class="trunc">' . e($e->getMessage()) . '</p>';
             continue;
         }
@@ -51,10 +51,10 @@ function print_page_body(array $config, Mongo $mongo,  $db, array $colls)
     </body></html><?php
 }
 
-function login_page_body(array $config)
+function login_page_body(array $config): void
 {
     $f = flash();
-    ?><!doctype html><html lang="<?= e((isset($GLOBALS['LANG']) ? $GLOBALS['LANG'] : ('en'))) ?>" data-theme="<?= e((isset($GLOBALS['THEME']) ? $GLOBALS['THEME'] : ('light'))) ?>"><head>
+    ?><!doctype html><html lang="<?= e($GLOBALS['LANG'] ?? 'en') ?>" data-theme="<?= e($GLOBALS['THEME'] ?? 'light') ?>"><head>
     <meta charset="utf-8"><meta name="viewport" content="width=device-width, initial-scale=1">
     <title><?= e($config['app_name']) ?> – Login</title>
     <link rel="stylesheet" href="assets/style.css"></head>
@@ -74,7 +74,7 @@ function login_page_body(array $config)
     </body></html><?php
 }
 
-function fatal_page_body(array $config,  $msg)
+function fatal_page_body(array $config, string $msg): void
 {
     $authHint = stripos($msg, 'auth') !== false || stripos($msg, 'not authorized') !== false;
     ?><!doctype html><html><head><meta charset="utf-8">
@@ -95,7 +95,7 @@ function fatal_page_body(array $config,  $msg)
  * Detects the OS and gives tailored install + verification steps. Uses no
  * driver classes, so it is safe to call before any MongoDB connection.
  */
-function no_mongodb_ext_page(array $config)
+function no_mongodb_ext_page(array $config): void
 {
     $isWin = (strtoupper(substr(PHP_OS, 0, 3)) === 'WIN');
     $isMac = (stripos(PHP_OS, 'Darwin') !== false);
@@ -183,7 +183,7 @@ php -r "var_dump(extension_loaded('mongodb'));"</pre>
     </div></body></html><?php
 }
 
-function render_navi(Mongo $mongo, array $databases, array $config,  $db,  $coll)
+function render_navi(Mongo $mongo, array $databases, array $config, string $db, string $coll): void
 {
     echo '<div class="navi-head">' . e(t('nav.databases')) . '</div><ul class="tree">';
     foreach ($databases as $d) {
@@ -220,7 +220,7 @@ function render_navi(Mongo $mongo, array $databases, array $config,  $db,  $coll
                         . e(url(['db' => $name, 'collection' => $c['name'], 'action' => 'browse']))
                         . '">▸ ' . e($c['name']) . '</a></li>';
                 }
-            } catch (Exception $e) {
+            } catch (Throwable $e) {
                 echo '<li class="muted">' . e($e->getMessage()) . '</li>';
             }
         }
@@ -236,7 +236,7 @@ function render_navi(Mongo $mongo, array $databases, array $config,  $db,  $coll
         . '<button type="submit">' . e(t('nav.create')) . '</button></form>';
 }
 
-function render_breadcrumb( $db,  $coll,  $action)
+function render_breadcrumb(string $db, string $coll, string $action): void
 {
     echo '<div class="breadcrumb"><a href="?">' . e(t('crumb.server')) . '</a>';
     if ($db !== '')   echo ' <span class="sep">›</span> <a href="' . e(url(['db' => $db])) . '">' . e($db) . '</a>';
@@ -250,7 +250,7 @@ function render_breadcrumb( $db,  $coll,  $action)
     echo '</div>';
 }
 
-function render_db_tabs( $db,  $action)
+function render_db_tabs(string $db, string $action): void
 {
     $tabs = [
         'structure'  => [t('dbtab.structure'), '🗂'],
@@ -262,7 +262,7 @@ function render_db_tabs( $db,  $action)
         'export'     => [t('tab.export'), '⬇'],
     ];
     echo '<div class="tabs">';
-    foreach ($tabs as $key => list($label, $icon)) {
+    foreach ($tabs as $key => [$label, $icon]) {
         $isStruct = $key === 'structure' && in_array($action, ['database', 'structure'], true);
         $on  = ($action === $key || $isStruct) ? ' on' : '';
         $url = $key === 'structure' ? url(['db' => $db]) : url(['db' => $db, 'action' => $key]);
@@ -271,7 +271,7 @@ function render_db_tabs( $db,  $action)
     echo '</div>';
 }
 
-function render_tabs( $db,  $coll,  $action)
+function render_tabs(string $db, string $coll, string $action): void
 {
     $tabs = [
         'browse'     => [t('tab.browse'), '📄'],
@@ -283,7 +283,7 @@ function render_tabs( $db,  $coll,  $action)
         'export'     => [t('tab.export'), '⬇'],
     ];
     echo '<div class="tabs">';
-    foreach ($tabs as $key => list($label, $icon)) {
+    foreach ($tabs as $key => [$label, $icon]) {
         $on = ($action === $key || ($action === 'edit' && $key === 'browse')) ? ' on' : '';
         echo '<a class="tab' . $on . '" href="'
             . e(url(['db' => $db, 'collection' => $coll, 'action' => $key]))

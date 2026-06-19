@@ -4,6 +4,6 @@
     "type": "project",
     "require": {
         "ext-mongodb": "*",
-        "eftec/bladeone": "^3.52"
+        "eftec/bladeone": ">=4.4 <4.12"
     }
 }

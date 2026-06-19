@@ -24,7 +24,7 @@ function render_layout($config, $mongo, $db, $coll, $action)
 {
     try {
         $databases = $mongo->listDatabases();
-    } catch (Exception $e) {
+    } catch (Throwable $e) {
         render_fatal($config, 'Cannot reach MongoDB: ' . $e->getMessage());
         return;
     }

@@ -15,7 +15,7 @@ final class Bson
     /* ============================================================ DECODE === */
 
     /** Decode every document in a concatenated BSON stream (a .bson dump file). */
-    public static function decodeAll( $bin)
+    public static function decodeAll(string $bin): array
     {
         $docs = [];
         $pos  = 0;
@@ -28,13 +28,13 @@ final class Bson
     }
 
     /** Decode one document starting at &$pos (advanced past it on return). */
-    public static function decodeDocument( $bin, int &$pos)
+    public static function decodeDocument(string $bin, int &$pos)
     {
         return (object) self::readElements($bin, $pos);
     }
 
     /** Read a BSON document body into an ordered associative array. */
-    private static function readElements( $bin, int &$pos)
+    private static function readElements(string $bin, int &$pos): array
     {
         $size = self::readInt32($bin, $pos);
         $end  = $pos - 4 + $size;                             // index just past the doc
@@ -48,7 +48,7 @@ final class Bson
         return $out;
     }
 
-    private static function decodeValue( $type,  $bin, int &$pos)
+    private static function decodeValue(int $type, string $bin, int &$pos)
     {
         switch ($type) {
             case 0x01: $v = unpack('e', substr($bin, $pos, 8))[1]; $pos += 8; return $v;            // double
@@ -86,20 +86,20 @@ final class Bson
         }
     }
 
-    private static function readInt32( $bin, int &$pos)
+    private static function readInt32(string $bin, int &$pos): int
     {
         $v = unpack('V', substr($bin, $pos, 4))[1]; $pos += 4;
         if ($v >= 0x80000000) $v -= 0x100000000;             // to signed
         return $v;
     }
 
-    private static function readInt64( $bin, int &$pos)
+    private static function readInt64(string $bin, int &$pos): int
     {
         $v = unpack('P', substr($bin, $pos, 8))[1]; $pos += 8; // 'P' = unsigned 64 LE; PHP int is signed 64 -> correct two's complement
         return $v;
     }
 
-    private static function readCString( $bin, int &$pos)
+    private static function readCString(string $bin, int &$pos): string
     {
         $end = strpos($bin, "\0", $pos);
         $s = substr($bin, $pos, $end - $pos);
@@ -107,7 +107,7 @@ final class Bson
         return $s;
     }
 
-    private static function readString( $bin, int &$pos)
+    private static function readString(string $bin, int &$pos): string
     {
         $len = self::readInt32($bin, $pos);
         $s = substr($bin, $pos, $len - 1);                   // exclude trailing NUL
@@ -118,7 +118,7 @@ final class Bson
     /* ============================================================ ENCODE === */
 
     /** Encode a document (array/stdClass) to BSON bytes. */
-    public static function encodeDocument($doc)
+    public static function encodeDocument($doc): string
     {
         $body = '';
         foreach ((array) $doc as $key => $value) {
@@ -128,13 +128,13 @@ final class Bson
         return pack('V', strlen($body) + 4) . $body;
     }
 
-    private static function encodeElement( $name, $value)
+    private static function encodeElement(string $name, $value): string
     {
-        list($type, $payload) = self::encodeValue($value);
+        [$type, $payload] = self::encodeValue($value);
         return chr($type) . $name . "\0" . $payload;
     }
 
-    private static function encodeValue($value)
+    private static function encodeValue($value): array
     {
         if ($value === null)  return [0x0A, ''];
         if (is_bool($value))  return [0x08, chr($value ? 1 : 0)];
@@ -183,7 +183,7 @@ final class Bson
         throw new \RuntimeException('Cannot encode value of type ' . gettype($value));
     }
 
-    private static function listToObjectKeys(array $list)
+    private static function listToObjectKeys(array $list): array
     {
         $out = [];
         foreach ($list as $i => $v) $out[(string) $i] = $v;

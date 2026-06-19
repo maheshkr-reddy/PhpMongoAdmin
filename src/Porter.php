@@ -5,13 +5,13 @@
  */
 
 /** Stream the export to the browser. Never returns (sends headers + body). */
-function handle_export(Mongo $mongo, array $post)
+function handle_export(Mongo $mongo, array $post): void
 {
-    $db     = (string) ((isset($post['db']) ? $post['db'] : ('')));
-    $colls  = array_values(array_filter((array) ((isset($post['collections']) ? $post['collections'] : ([]))), 'strlen'));
-    $format = in_array((isset($post['format']) ? $post['format'] : ('json')), ['json', 'ndjson', 'csv', 'bson'], true) ? $post['format'] : 'json';
+    $db     = (string) ($post['db'] ?? '');
+    $colls  = array_values(array_filter((array) ($post['collections'] ?? []), 'strlen'));
+    $format = in_array($post['format'] ?? 'json', ['json', 'ndjson', 'csv', 'bson'], true) ? $post['format'] : 'json';
     $asZip  = !empty($post['aszip']);
-    $ids    = array_values(array_filter((array) ((isset($post['ids']) ? $post['ids'] : ([]))), 'strlen'));
+    $ids    = array_values(array_filter((array) ($post['ids'] ?? []), 'strlen'));
     if ($db === '' || !$colls) {
         flash('Pick at least one collection to export.', 'error');
         redirect(['db' => $db, 'action' => 'export']);
@@ -59,11 +59,11 @@ function handle_export(Mongo $mongo, array $post)
     header('Content-Length: ' . filesize($tmpZip));
     readfile($tmpZip);
     @unlink($tmpZip);
-    foreach ((isset($tmpFiles) ? $tmpFiles : ([]))as $t) @unlink($t);
+    foreach ($tmpFiles ?? [] as $t) @unlink($t);
 }
 
 /** Write one collection to a stream in the requested format. */
-function export_collection_stream(Mongo $mongo,  $db,  $coll,  $format, $fh, array $filter = [])
+function export_collection_stream(Mongo $mongo, string $db, string $coll, string $format, $fh, array $filter = []): void
 {
     if ($format === 'json') {
         fwrite($fh, '[');
@@ -104,18 +104,18 @@ function export_collection_stream(Mongo $mongo,  $db,  $coll,  $format, $fh, arr
 }
 
 /** Process an uploaded import; returns a human-readable report. */
-function handle_import(Mongo $mongo,  $db, array $post, array $file = null)
+function handle_import(Mongo $mongo, string $db, array $post, ?array $file): string
 {
     if ($db === '') throw new RuntimeException('No target database.');
-    if (!$file || ((isset($file['error']) ? $file['error'] : (UPLOAD_ERR_NO_FILE))) !== UPLOAD_ERR_OK) {
+    if (!$file || ($file['error'] ?? UPLOAD_ERR_NO_FILE) !== UPLOAD_ERR_OK) {
         throw new RuntimeException('No file uploaded (or it exceeded the PHP upload limit).');
     }
-    $name   = (isset($file['name']) ? $file['name'] : ('upload'));
+    $name   = $file['name'] ?? 'upload';
     $bytes  = file_get_contents($file['tmp_name']);
-    $format = (isset($post['format']) ? $post['format'] : ('auto'));
+    $format = $post['format'] ?? 'auto';
     $drop   = !empty($post['drop']);
     $infer  = !empty($post['infer']);
-    $target = trim((string) ((isset($post['collection']) ? $post['collection'] : (''))));
+    $target = trim((string) ($post['collection'] ?? ''));
 
     // transparent gunzip for *.gz (but not *.zip)
     $lower = strtolower($name);
@@ -133,17 +133,17 @@ function handle_import(Mongo $mongo,  $db, array $post, array $file = null)
         else                                      $format = 'json';
     }
 
-    $collFromName = function ( $fname) {
+    $collFromName = function (string $fname): string {
         $base = preg_replace('/\.(gz)$/i', '', $fname);
         $base = preg_replace('/\.(bson|json|jsonl|ndjson|csv)$/i', '', basename($base));
         return $base !== '' ? $base : 'imported';
     };
 
     $totals = [];
-    $importInto = function ( $coll, iterable $docs) use ($mongo, $db, $drop, &$totals) {
-        if ($drop) { try { $mongo->dropCollection($db, $coll); } catch (Exception $e) {} }
+    $importInto = function (string $coll, iterable $docs) use ($mongo, $db, $drop, &$totals) {
+        if ($drop) { try { $mongo->dropCollection($db, $coll); } catch (Throwable $e) {} }
         $n = $mongo->insertMany($db, $coll, $docs);
-        $totals[$coll] = ((isset($totals[$coll]) ? $totals[$coll] : (0))) + $n;
+        $totals[$coll] = ($totals[$coll] ?? 0) + $n;
     };
 
     if ($format === 'zip') {
@@ -182,7 +182,7 @@ function handle_import(Mongo $mongo,  $db, array $post, array $file = null)
 }
 
 /** Parse a JSON array (or a single object) of Extended-JSON documents. */
-function parse_json_docs( $content)
+function parse_json_docs(string $content): array
 {
     $content = trim($content);
     if ($content === '') return [];
@@ -197,7 +197,7 @@ function parse_json_docs( $content)
 }
 
 /** Parse NDJSON / JSON Lines (one Extended-JSON document per line). */
-function parse_ndjson_docs( $content)
+function parse_ndjson_docs(string $content): array
 {
     $out = [];
     foreach (preg_split('/\r\n|\r|\n/', $content) as $line) {
@@ -209,7 +209,7 @@ function parse_ndjson_docs( $content)
 }
 
 /** Parse CSV (first row = header) into documents, with optional type inference. */
-function parse_csv_docs( $content,  $infer)
+function parse_csv_docs(string $content, bool $infer): array
 {
     $fh = fopen('php://temp', 'r+');
     fwrite($fh, $content);
@@ -222,7 +222,7 @@ function parse_csv_docs( $content,  $infer)
         $doc = [];
         foreach ($header as $i => $key) {
             if ($key === '' || $key === null) continue;
-            $cell = (isset($row[$i]) ? $row[$i] : (''));
+            $cell = $row[$i] ?? '';
             $doc[$key] = $infer ? csv_infer($cell) : $cell;
         }
         $out[] = $doc;

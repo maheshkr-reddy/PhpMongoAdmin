@@ -1,9 +1,9 @@
 <?php
 /** Session, engine, i18n and module loading. Expects $config in scope. */
 
-$SESSION_TTL = (int) ((isset($config['session_lifetime']) ? $config['session_lifetime'] : (7200)));
+$SESSION_TTL = (int) ($config['session_lifetime'] ?? 7200);
 ini_set('session.gc_maxlifetime', (string) $SESSION_TTL);
-session_set_cookie_params($SESSION_TTL, '/', '', false, true);  // positional (PHP < 7.3)
+session_set_cookie_params(['lifetime' => $SESSION_TTL, 'path' => '/', 'httponly' => true, 'samesite' => 'Lax']);
 session_start();
 
 require __DIR__ . '/../src/Mongo.php';
@@ -12,15 +12,15 @@ require __DIR__ . '/../src/Porter.php';
 
 /* ------------------------------------------------ appearance: theme + i18n */
 
-$GLOBALS['THEMES'] = (isset($config['themes']) ? $config['themes'] : (['light' => 'Light']));
-$GLOBALS['LANGS']  = (isset($config['languages']) ? $config['languages'] : (['en' => 'English']));
-$GLOBALS['HIDDEN_DBS'] = (isset($config['hidden_dbs']) ? $config['hidden_dbs'] : ([]));
+$GLOBALS['THEMES'] = $config['themes']   ?? ['light' => 'Light'];
+$GLOBALS['LANGS']  = $config['languages'] ?? ['en' => 'English'];
+$GLOBALS['HIDDEN_DBS'] = $config['hidden_dbs'] ?? [];
 
-$theme = (isset($_COOKIE['pma_theme']) ? $_COOKIE['pma_theme'] : (((isset($config['default_theme']) ? $config['default_theme'] : ('light')))));
+$theme = $_COOKIE['pma_theme'] ?? ($config['default_theme'] ?? 'light');
 if (!isset($GLOBALS['THEMES'][$theme])) $theme = 'light';
 $GLOBALS['THEME'] = $theme;
 
-$lang = (isset($_COOKIE['pma_lang']) ? $_COOKIE['pma_lang'] : (((isset($config['default_lang']) ? $config['default_lang'] : ('en')))));
+$lang = $_COOKIE['pma_lang'] ?? ($config['default_lang'] ?? 'en');
 if (!isset($GLOBALS['LANGS'][$lang])) $lang = 'en';
 $GLOBALS['LANG']    = $lang;
 $GLOBALS['I18N_EN'] = require __DIR__ . '/../lang/en.php';

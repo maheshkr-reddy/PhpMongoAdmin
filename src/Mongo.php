@@ -14,14 +14,14 @@ class Mongo
 {
     private $manager;
 
-    public function __construct( $uri, array $uriOptions = [], array $driverOptions = [])
+    public function __construct(string $uri, array $uriOptions = [], array $driverOptions = [])
     {
         // Decode arrays/objects to PHP arrays/stdClass so we can json_encode freely.
         $this->manager = new Manager($uri, $uriOptions, $driverOptions);
     }
 
     /** Force a server round-trip so invalid credentials surface immediately. */
-    public function ping()
+    public function ping(): void
     {
         $this->manager->executeCommand('admin', new Command(['ping' => 1]));
     }
@@ -34,89 +34,89 @@ class Mongo
      *  - A limited user gets only the databases they hold privileges on
      *    (via `authorizedDatabases: true`), instead of an authorization error.
      */
-    public function listDatabases()
+    public function listDatabases(): array
     {
         try {
-            $res = (isset($this->manager->executeCommand('admin', new Command(['listDatabases' => 1]))->toArray()[0]) ? $this->manager->executeCommand('admin', new Command(['listDatabases' => 1]))->toArray()[0] : (null));
+            $res = $this->manager->executeCommand('admin', new Command(['listDatabases' => 1]))->toArray()[0] ?? null;
         } catch (MongoException $e) {
             // Not authorized to enumerate every database → ask for the authorized subset.
-            $res = (isset($this->manager->executeCommand('admin', new Command(['listDatabases' => 1, 'authorizedDatabases' => true]))->toArray()[0]) ? $this->manager->executeCommand('admin', new Command(['listDatabases' => 1, 'authorizedDatabases' => true]))->toArray()[0] : (null));
+            $res = $this->manager->executeCommand('admin', new Command(['listDatabases' => 1, 'authorizedDatabases' => true]))->toArray()[0] ?? null;
         }
         $out = [];
-        foreach (((isset($res->databases) ? $res->databases : ([]))) as $db) {
+        foreach (($res->databases ?? []) as $db) {
             $out[] = [
                 'name'       => $db->name,
-                'sizeOnDisk' => (isset($db->sizeOnDisk) ? $db->sizeOnDisk : (0)),
-                'empty'      => (isset($db->empty) ? $db->empty : (false)),
+                'sizeOnDisk' => $db->sizeOnDisk ?? 0,
+                'empty'      => $db->empty ?? false,
             ];
         }
         return $out;
     }
 
-    public function serverInfo()
+    public function serverInfo(): array
     {
         $info = [];
         try {
-            $build = (isset($this->manager->executeCommand('admin', new Command(['buildInfo' => 1]))->toArray()[0]) ? $this->manager->executeCommand('admin', new Command(['buildInfo' => 1]))->toArray()[0] : (null));
-            $info['version']     = (isset($build->version) ? $build->version : ('?'));
-            $info['gitVersion']  = (isset($build->gitVersion) ? $build->gitVersion : (''));
-            $info['maxBson']     = (isset($build->maxBsonObjectSize) ? $build->maxBsonObjectSize : (null));
+            $build = $this->manager->executeCommand('admin', new Command(['buildInfo' => 1]))->toArray()[0] ?? null;
+            $info['version']     = $build->version ?? '?';
+            $info['gitVersion']  = $build->gitVersion ?? '';
+            $info['maxBson']     = $build->maxBsonObjectSize ?? null;
         } catch (MongoException $e) { /* ignore */ }
         try {
-            $status = (isset($this->manager->executeCommand('admin', new Command(['serverStatus' => 1]))->toArray()[0]) ? $this->manager->executeCommand('admin', new Command(['serverStatus' => 1]))->toArray()[0] : (null));
-            $info['host']        = (isset($status->host) ? $status->host : (''));
-            $info['uptime']      = (isset($status->uptime) ? $status->uptime : (null));
+            $status = $this->manager->executeCommand('admin', new Command(['serverStatus' => 1]))->toArray()[0] ?? null;
+            $info['host']        = $status->host ?? '';
+            $info['uptime']      = $status->uptime ?? null;
             $info['connections'] = isset($status->connections->current) ? $status->connections->current : null;
-            $info['process']     = (isset($status->process) ? $status->process : ('mongod'));
+            $info['process']     = $status->process ?? 'mongod';
         } catch (MongoException $e) { /* ignore – often needs privileges */ }
         return $info;
     }
 
     /* ----------------------------------------------------------- collections */
 
-    public function listCollections( $db)
+    public function listCollections(string $db): array
     {
         $res = $this->manager->executeCommand($db, new Command(['listCollections' => 1, 'nameOnly' => false]));
         $out = [];
         foreach ($res as $c) {
             $out[] = [
                 'name' => $c->name,
-                'type' => (isset($c->type) ? $c->type : ('collection')),
+                'type' => $c->type ?? 'collection',
             ];
         }
         usort($out, function($a, $b) { return strcmp($a['name'], $b['name']); });
         return $out;
     }
 
-    public function collectionStats( $db,  $coll)
+    public function collectionStats(string $db, string $coll): array
     {
         try {
-            $res = (isset($this->manager->executeCommand($db, new Command(['collStats' => $coll]))->toArray()[0]) ? $this->manager->executeCommand($db, new Command(['collStats' => $coll]))->toArray()[0] : (null));
+            $res = $this->manager->executeCommand($db, new Command(['collStats' => $coll]))->toArray()[0] ?? null;
             return [
-                'count'        => (isset($res->count) ? $res->count : (0)),
-                'size'         => (isset($res->size) ? $res->size : (0)),
-                'storageSize'  => (isset($res->storageSize) ? $res->storageSize : (0)),
-                'avgObjSize'   => (isset($res->avgObjSize) ? $res->avgObjSize : (0)),
-                'nindexes'     => (isset($res->nindexes) ? $res->nindexes : (0)),
-                'totalIndexSize' => (isset($res->totalIndexSize) ? $res->totalIndexSize : (0)),
+                'count'        => $res->count ?? 0,
+                'size'         => $res->size ?? 0,
+                'storageSize'  => $res->storageSize ?? 0,
+                'avgObjSize'   => $res->avgObjSize ?? 0,
+                'nindexes'     => $res->nindexes ?? 0,
+                'totalIndexSize' => $res->totalIndexSize ?? 0,
             ];
         } catch (MongoException $e) {
             return ['count' => $this->count($db, $coll)];
         }
     }
 
-    public function count( $db,  $coll, $filter = [])
+    public function count(string $db, string $coll, $filter = []): int
     {
         $cmd = new Command(['count' => $coll, 'query' => self::toObject($filter)]);
         try {
-            $res = (isset($this->manager->executeCommand($db, $cmd)->toArray()[0]) ? $this->manager->executeCommand($db, $cmd)->toArray()[0] : (null));
-            return (int) ((isset($res->n) ? $res->n : (0)));
+            $res = $this->manager->executeCommand($db, $cmd)->toArray()[0] ?? null;
+            return (int) ($res->n ?? 0);
         } catch (MongoException $e) {
             return 0;
         }
     }
 
-    public function listIndexes( $db,  $coll)
+    public function listIndexes(string $db, string $coll): array
     {
         try {
             $res = $this->manager->executeCommand($db, new Command(['listIndexes' => $coll]));
@@ -125,7 +125,7 @@ class Mongo
                 $out[] = [
                     'name' => $ix->name,
                     'key'  => json_encode($ix->key, JSON_UNESCAPED_SLASHES),
-                    'unique' => (isset($ix->unique) ? $ix->unique : (false)),
+                    'unique' => $ix->unique ?? false,
                 ];
             }
             return $out;
@@ -142,7 +142,7 @@ class Mongo
      *
      * @return array{0: array<int,array{json:string, raw:object}>, 1:int}
      */
-    public function find( $db,  $coll, $filter = [], array $opts = [])
+    public function find(string $db, string $coll, $filter = [], array $opts = []): array
     {
         $query = new Query(self::toObject($filter), $opts);
         $cursor = $this->manager->executeQuery("$db.$coll", $query);
@@ -162,7 +162,7 @@ class Mongo
         return $docs;
     }
 
-    public function insert( $db,  $coll,  $json)
+    public function insert(string $db, string $coll, string $json): void
     {
         $doc  = self::jsonToPhp($json);
         $bulk = new BulkWrite();
@@ -170,7 +170,7 @@ class Mongo
         $this->manager->executeBulkWrite("$db.$coll", $bulk);
     }
 
-    public function replaceById( $db,  $coll, $id,  $json)
+    public function replaceById(string $db, string $coll, $id, string $json): void
     {
         $doc  = self::jsonToPhp($json);
         $bulk = new BulkWrite();
@@ -178,7 +178,7 @@ class Mongo
         $this->manager->executeBulkWrite("$db.$coll", $bulk);
     }
 
-    public function deleteById( $db,  $coll, $id)
+    public function deleteById(string $db, string $coll, $id): void
     {
         $bulk = new BulkWrite();
         $bulk->delete(['_id' => self::resolveId($id)], ['limit' => 1]);
@@ -188,7 +188,7 @@ class Mongo
     /* ----------------------------------------------------- import / export */
 
     /** Stream every matching document to a callback (stdClass per doc). */
-    public function each( $db,  $coll, callable $cb, $filter = [], array $opts = [])
+    public function each(string $db, string $coll, callable $cb, $filter = [], array $opts = []): void
     {
         $query  = new Query(self::toObject($filter), $opts);
         $cursor = $this->manager->executeQuery("$db.$coll", $query);
@@ -199,7 +199,7 @@ class Mongo
     }
 
     /** Union of top-level field names across a collection (first-seen order). */
-    public function topLevelKeys( $db,  $coll)
+    public function topLevelKeys(string $db, string $coll): array
     {
         $keys = [];
         $this->each($db, $coll, function ($doc) use (&$keys) {
@@ -209,7 +209,7 @@ class Mongo
     }
 
     /** Insert many documents in batches. Returns the number inserted. */
-    public function insertMany( $db,  $coll, iterable $docs,  $batch = 1000)
+    public function insertMany(string $db, string $coll, iterable $docs, int $batch = 1000): int
     {
         $count = 0; $n = 0;
         $bulk = new BulkWrite();
@@ -228,7 +228,7 @@ class Mongo
     }
 
     /** $set a single field on one document; returns the resolved value. */
-    public function setField( $db,  $coll,  $idJson,  $field,  $valueText)
+    public function setField(string $db, string $coll, string $idJson, string $field, string $valueText)
     {
         if ($field === '_id') {
             throw new \RuntimeException('The _id field cannot be edited.');
@@ -242,24 +242,24 @@ class Mongo
     }
 
     /** Parse an inline-edit value: Extended JSON if valid, otherwise a plain string. */
-    public static function parseScalarOrJson( $text)
+    public static function parseScalarOrJson(string $text)
     {
         $t = trim($text);
         if ($t === '') return '';
         try {
             return self::jsonToPhp($t);
-        } catch (\Exception $e) {
+        } catch (\Throwable $e) {
             return $text;                                    // not JSON -> keep as string
         }
     }
 
     /* ----------------------------------------------------------------- admin */
 
-    public function createCollection( $db,  $coll, array $options = [])
+    public function createCollection(string $db, string $coll, array $options = []): void
     {
         $cmd = ['create' => $coll];
         if (!empty($options['capped'])) {
-            $size = (int) ((isset($options['size']) ? $options['size'] : (0)));
+            $size = (int) ($options['size'] ?? 0);
             if ($size <= 0) throw new \RuntimeException('A capped collection needs a maximum size (bytes).');
             $cmd['capped'] = true;
             $cmd['size']   = $size;
@@ -268,29 +268,29 @@ class Mongo
         $this->manager->executeCommand($db, new Command($cmd));
     }
 
-    public function dropCollection( $db,  $coll)
+    public function dropCollection(string $db, string $coll): void
     {
         $this->manager->executeCommand($db, new Command(['drop' => $coll]));
     }
 
-    public function dropDatabase( $db)
+    public function dropDatabase(string $db): void
     {
         $this->manager->executeCommand($db, new Command(['dropDatabase' => 1]));
     }
 
     /** Mongo creates a DB lazily, so we make it real by adding one collection. */
-    public function createDatabase( $db,  $firstCollection = 'data')
+    public function createDatabase(string $db, string $firstCollection = 'data'): void
     {
         $this->manager->executeCommand($db, new Command(['create' => $firstCollection]));
     }
 
     /** Copy every (non-view) collection of one database into another. Returns collections copied. */
-    public function copyDatabase( $src,  $dst,  $copyIndexes = true)
+    public function copyDatabase(string $src, string $dst, bool $copyIndexes = true): int
     {
         if ($src === $dst) throw new \RuntimeException('Source and destination databases are the same.');
         $n = 0;
         foreach ($this->listCollections($src) as $c) {
-            if (((isset($c['type']) ? $c['type'] : ('collection'))) === 'view') continue;     // views aren't copyable as data
+            if (($c['type'] ?? 'collection') === 'view') continue;     // views aren't copyable as data
             $this->copyCollection($src, $c['name'], $dst, $c['name'], $copyIndexes);
             $n++;
         }
@@ -298,7 +298,7 @@ class Mongo
     }
 
     /** Rename a database = copy all collections to the new name, then drop the source. */
-    public function renameDatabase( $src,  $dst)
+    public function renameDatabase(string $src, string $dst): int
     {
         $n = $this->copyDatabase($src, $dst, true);
         $this->dropDatabase($src);
@@ -306,20 +306,20 @@ class Mongo
     }
 
     /** List users defined on a database with their roles (needs privileges). */
-    public function listUsers( $db)
+    public function listUsers(string $db): array
     {
         $out = [];
         $res = $this->manager->executeCommand($db, new Command(['usersInfo' => 1]));
         $res->setTypeMap(['root' => 'object', 'document' => 'object', 'array' => 'array']);
         $doc = current(iterator_to_array($res)) ?: null;
-        foreach (((isset($doc->users) ? $doc->users : ([]))) as $u) {
+        foreach (($doc->users ?? []) as $u) {
             $roles = [];
-            foreach (((isset($u->roles) ? $u->roles : ([]))) as $r) {
-                $roles[] = ((isset($r->role) ? $r->role : ('?'))) . '@' . ((isset($r->db) ? $r->db : ('?')));
+            foreach (($u->roles ?? []) as $r) {
+                $roles[] = ($r->role ?? '?') . '@' . ($r->db ?? '?');
             }
             $out[] = [
-                'user'  => (isset($u->user) ? $u->user : ('')),
-                'db'    => (isset($u->db) ? $u->db : ($db)),
+                'user'  => $u->user ?? '',
+                'db'    => $u->db ?? $db,
                 'roles' => $roles,
             ];
         }
@@ -327,7 +327,7 @@ class Mongo
     }
 
     /** Run a raw command document (Extended-JSON parsed) and return result docs. */
-    public function command( $db, $commandDoc,  $cap = 200)
+    public function command(string $db, $commandDoc, int $cap = 200): array
     {
         $cursor = $this->manager->executeCommand($db, new Command($commandDoc));
         $cursor->setTypeMap(['root' => 'object', 'document' => 'object', 'array' => 'array']);
@@ -349,7 +349,7 @@ class Mongo
      * driver. Uses only the BSON type classes — no procedural BSON functions,
      * so it works on every ext-mongodb build.
      */
-    public static function jsonToPhp( $json)
+    public static function jsonToPhp(string $json)
     {
         $json = trim($json);
         if ($json === '') {
@@ -373,7 +373,7 @@ class Mongo
         }
 
         $keys = array_keys((array) $value);
-        $has  = function( $k) use ($keys) { return in_array($k, $keys, true); };
+        $has  = function(string $k) use ($keys) { return in_array($k, $keys, true); };
 
         // --- Extended JSON wrappers -------------------------------------
         if ($keys === ['$oid'] && is_string($value->{'$oid'})) {
@@ -400,14 +400,14 @@ class Mongo
         }
         if ($keys === ['$regularExpression'] && isset($value->{'$regularExpression'}->pattern)) {
             $r = $value->{'$regularExpression'};
-            return new \MongoDB\BSON\Regex($r->pattern, (isset($r->options) ? $r->options : ('')));
+            return new \MongoDB\BSON\Regex($r->pattern, $r->options ?? '');
         }
         if ($has('$regex')) {                          // legacy regex form
-            return new \MongoDB\BSON\Regex((string) $value->{'$regex'}, (string) ((isset($value->{'$options'}) ? $value->{'$options'} : (''))));
+            return new \MongoDB\BSON\Regex((string) $value->{'$regex'}, (string) ($value->{'$options'} ?? ''));
         }
         if ($keys === ['$binary'] && isset($value->{'$binary'}->base64)) {
             $b = $value->{'$binary'};
-            return new \MongoDB\BSON\Binary(base64_decode($b->base64), (int) hexdec((isset($b->subType) ? $b->subType : ('00'))));
+            return new \MongoDB\BSON\Binary(base64_decode($b->base64), (int) hexdec($b->subType ?? '00'));
         }
         if ($has('$binary') && isset($value->{'$type'})) {   // legacy binary form
             return new \MongoDB\BSON\Binary(base64_decode((string) $value->{'$binary'}), (int) hexdec((string) $value->{'$type'}));
@@ -429,7 +429,7 @@ class Mongo
     }
 
     /** Accept array or Extended-JSON string filter and normalise to object. */
-    private static function toObject($filter)
+    private static function toObject($filter): object
     {
         if (is_string($filter)) {
             $filter = self::jsonToPhp($filter);
@@ -445,13 +445,13 @@ class Mongo
      * so its type survives the round trip:
      *   ObjectId -> {"$oid":"..."}   int 2 -> 2   string "2" -> "2"
      */
-    private static function idToString($id)
+    private static function idToString($id): string
     {
         return (string) json_encode($id, JSON_UNESCAPED_SLASHES | JSON_UNESCAPED_UNICODE);
     }
 
     /** Turn the _id we got from the URL back into the right BSON/PHP type. */
-    private static function resolveId( $id)
+    private static function resolveId(string $id)
     {
         $decoded = json_decode($id);
         if (json_last_error() === JSON_ERROR_NONE) {
@@ -465,16 +465,16 @@ class Mongo
     }
 
     /** Fetch a single document by its _id (encoded by idToString). */
-    public function findById( $db,  $coll,  $idJson)
+    public function findById(string $db, string $coll, string $idJson): ?array
     {
         $docs = $this->find($db, $coll, ['_id' => self::resolveId($idJson)], ['limit' => 1]);
-        return (isset($docs[0]) ? $docs[0] : (null));
+        return $docs[0] ?? null;
     }
 
     /* --------------------------------------------------- operations / bulk */
 
     /** Rename a collection within the same database (metadata-only, fast). */
-    public function renameCollection( $db,  $from,  $to)
+    public function renameCollection(string $db, string $from, string $to): void
     {
         if ($to === '' || $from === '') throw new \RuntimeException('Collection name is required.');
         if ($to === $from) return;
@@ -486,7 +486,7 @@ class Mongo
     }
 
     /** Copy all documents (and, best-effort, indexes) into another namespace. */
-    public function copyCollection( $sDb,  $sColl,  $dDb,  $dColl,  $copyIndexes = true)
+    public function copyCollection(string $sDb, string $sColl, string $dDb, string $dColl, bool $copyIndexes = true): int
     {
         if ($sDb === $dDb && $sColl === $dColl) {
             throw new \RuntimeException('Source and destination are the same collection.');
@@ -500,16 +500,16 @@ class Mongo
             if (count($buf) >= 1000) $flush();
         });
         $flush();
-        if ($copyIndexes) { try { $this->copyIndexes($sDb, $sColl, $dDb, $dColl); } catch (\Exception $e) { /* best effort */ } }
+        if ($copyIndexes) { try { $this->copyIndexes($sDb, $sColl, $dDb, $dColl); } catch (\Throwable $e) { /* best effort */ } }
         return $count;
     }
 
-    private function copyIndexes( $sDb,  $sColl,  $dDb,  $dColl)
+    private function copyIndexes(string $sDb, string $sColl, string $dDb, string $dColl): void
     {
         $res = $this->manager->executeCommand($sDb, new Command(['listIndexes' => $sColl]));
         $specs = [];
         foreach ($res as $ix) {
-            if (((isset($ix->name) ? $ix->name : (''))) === '_id_') continue;       // auto-created on the target
+            if (($ix->name ?? '') === '_id_') continue;       // auto-created on the target
             $spec = ['key' => $ix->key, 'name' => $ix->name];
             foreach (['unique', 'sparse', 'expireAfterSeconds', 'partialFilterExpression'] as $opt) {
                 if (isset($ix->$opt)) $spec[$opt] = $ix->$opt;
@@ -522,7 +522,7 @@ class Mongo
     }
 
     /** Move a collection. Same db → rename; cross db → copy + drop source. Returns docs moved. */
-    public function moveCollection( $sDb,  $sColl,  $dDb,  $dColl)
+    public function moveCollection(string $sDb, string $sColl, string $dDb, string $dColl): int
     {
         if ($sDb === $dDb) { $this->renameCollection($sDb, $sColl, $dColl); return 0; }
         $n = $this->copyCollection($sDb, $sColl, $dDb, $dColl, true);
@@ -530,7 +530,7 @@ class Mongo
         return $n;
     }
 
-    protected function updateMany( $db,  $coll, array $filter, array $update)
+    protected function updateMany(string $db, string $coll, array $filter, array $update): int
     {
         $bulk = new BulkWrite();
         $bulk->update(self::toObject($filter), $update, ['multi' => true, 'upsert' => false]);
@@ -539,7 +539,7 @@ class Mongo
     }
 
     /** Add a field to documents (by default only where it is missing). Returns modified count. */
-    public function addField( $db,  $coll,  $field,  $valueText,  $onlyMissing = true)
+    public function addField(string $db, string $coll, string $field, string $valueText, bool $onlyMissing = true): int
     {
         if (trim($field) === '') throw new \RuntimeException('Field name is required.');
         $value  = self::parseScalarOrJson($valueText);
@@ -548,14 +548,14 @@ class Mongo
     }
 
     /** Remove a field from every document. Returns modified count. */
-    public function removeField( $db,  $coll,  $field)
+    public function removeField(string $db, string $coll, string $field): int
     {
         if ($field === '_id')      throw new \RuntimeException('The _id field cannot be removed.');
         if (trim($field) === '')   throw new \RuntimeException('Field name is required.');
         return $this->updateMany($db, $coll, [], ['$unset' => [$field => '']]);
     }
 
-    private static function quoteRegex( $s)
+    private static function quoteRegex(string $s): string
     {
         return preg_replace('/[.\\\\+*?\[^\]$(){}=!<>|:#\/-]/', '\\\\$0', $s);
     }
@@ -565,7 +565,7 @@ class Mongo
      * where it equals $find; substring mode rewrites occurrences inside string
      * values via $replaceAll (MongoDB 4.4+). Returns modified count.
      */
-    public function findReplace( $db,  $coll,  $field,  $find,  $replace,  $whole = false)
+    public function findReplace(string $db, string $coll, string $field, string $find, string $replace, bool $whole = false): int
     {
         if (trim($field) === '' || $field === '_id') throw new \RuntimeException('Choose a field other than _id.');
         if ($whole) {
@@ -578,7 +578,7 @@ class Mongo
     }
 
     /** Build an {_id:{$in:[…]}} filter from typed _id JSON strings. */
-    public function idInFilter(array $idJsons)
+    public function idInFilter(array $idJsons): array
     {
         $ids = [];
         foreach ($idJsons as $j) {
@@ -589,7 +589,7 @@ class Mongo
     }
 
     /** Delete documents by a list of typed _id JSON strings. Returns deleted count. */
-    public function deleteByIds( $db,  $coll, array $idJsons)
+    public function deleteByIds(string $db, string $coll, array $idJsons): int
     {
         $bulk = new BulkWrite(); $n = 0;
         foreach ($idJsons as $j) {
@@ -603,7 +603,7 @@ class Mongo
     }
 
     /** Copy specific documents (by id) into another namespace. Returns copied count. */
-    public function copyDocuments( $sDb,  $sColl,  $dDb,  $dColl, array $idJsons)
+    public function copyDocuments(string $sDb, string $sColl, string $dDb, string $dColl, array $idJsons): int
     {
         $docs = $this->find($sDb, $sColl, $this->idInFilter($idJsons));
         $raw  = array_map(function($d) { return $d['raw']; }, $docs);
@@ -611,13 +611,13 @@ class Mongo
     }
 
     /** Fetch raw documents (+ json) for a list of ids (used by multi-edit). */
-    public function findByIds( $db,  $coll, array $idJsons)
+    public function findByIds(string $db, string $coll, array $idJsons): array
     {
         return $idJsons ? $this->find($db, $coll, $this->idInFilter($idJsons)) : [];
     }
 
     /** Remove every document from a collection (keeps the collection and its indexes). */
-    public function emptyCollection( $db,  $coll)
+    public function emptyCollection(string $db, string $coll): int
     {
         $bulk = new BulkWrite();
         $bulk->delete([], ['limit' => 0]);
@@ -626,12 +626,12 @@ class Mongo
     }
 
     /** Insert one document built from parallel field/value arrays (values typed via parseScalarOrJson). */
-    public function insertFields( $db,  $coll, array $keys, array $vals)
+    public function insertFields(string $db, string $coll, array $keys, array $vals): void
     {
         $doc = [];
         foreach ($keys as $i => $k) {
             $k = trim((string) $k);
-            $v = (string) ((isset($vals[$i]) ? $vals[$i] : ('')));
+            $v = (string) ($vals[$i] ?? '');
             if ($k === '' || trim($v) === '') continue;       // skip blank rows
             $doc[$k] = self::parseScalarOrJson($v);
         }

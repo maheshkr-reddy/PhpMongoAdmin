@@ -5,6 +5,8 @@
  *   php -S localhost:8000        # then open http://localhost:8000
  * or point an Apache/Nginx vhost DocumentRoot at this folder.
  */
+declare(strict_types=1);
+
 $config = require __DIR__ . '/config.php';
 
 require __DIR__ . '/app/bootstrap.php';    // session, engine, i18n, helpers, views, layout, actions
@@ -25,6 +27,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 render_layout(
     $config,
     $mongo,
-    (isset($_GET['db']) ? $_GET['db'] : ('')),
-    (isset($_GET['collection']) ? $_GET['collection'] : ('')),
-    (isset($_GET['action']) ? $_GET['action'] : ('')));
+    $_GET['db'] ?? '',
+    $_GET['collection'] ?? '',
+    $_GET['action'] ?? ''
+);
