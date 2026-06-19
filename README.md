@@ -13,14 +13,14 @@ This build targets **PHP 7.3 through 8.x**.
 ext-mongodb is released independently of PHP. Newer driver releases drop old PHP
 versions, so on older PHP you must install an **older** driver. Rough guide:
 
-| PHP version | Use ext-mongodb | Notes |
-|-------------|-----------------|-------|
-| 8.1 – 8.4   | latest 1.x / 2.x | newest stable |
-| 8.0         | 1.9 – 1.20      | |
-| 7.4         | 1.6 – 1.20      | |
-| 7.3         | 1.6 – 1.17      | |
-| 7.2         | 1.5 – 1.15      | |
-| 7.1         | 1.3 – 1.11      | |
+| PHP version | Php Mongodb Extension | Notes |
+|-------------|-----------------------|-------|
+| 8.1 – 8.4   | latest 1.x / 2.x      | newest stable |
+| 8.0         | 1.9 – 1.20            | |
+| 7.4         | 1.6 – 1.20            | |
+| 7.3         | 1.6 – 1.17            | |
+| 7.2         | 1.5 – 1.15            | |
+| 7.1         | 1.3 – 1.11            | |
 | 7.0         | 1.2 – 1.9 (use **1.6.0** for this build) | |
 | 5.6         | up to **1.7.x** (use **1.7.4** for this build) | last line supporting 5.6 |
 
