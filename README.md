@@ -1,6 +1,6 @@
 # phpMongoAdmin
 MongoDB administration in plain PHP — **no framework, no Composer**.
-This build targets **PHP 7.3 through 8.x**. Use version v1.0.0 which works on All **PHP versions***
+This build targets **PHP 7.3 through 8.x**. Use version **v1.0.0** which works on All **PHP versions***
 
 ## Requirements
 
