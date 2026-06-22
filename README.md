@@ -7,7 +7,14 @@ This build targets **PHP 7.3 through 8.x**. Use version **v1.0.0** which works o
 - **PHP 7.3+**
 - **ext-mongodb 1.6+** (any compatible 1.x / 2.x build for your PHP)
 - `ext-zip` for ZIP import/export
-  
+## 1. Pick the right version for your PHP
+
+
+| PHP version | PhpMongoAdmin Version|
+|-------------|-----------------------|
+| 7.3+        | 2.0.0                 | 
+| 5.6+        | 1.0.0                 |
+
 ## 1. Pick the right driver version for your PHP
 
 ext-mongodb is released independently of PHP. Newer driver releases drop old PHP
