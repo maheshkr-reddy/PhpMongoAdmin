@@ -6,10 +6,7 @@ This build targets **PHP 7.3 through 8.x**. Use version **v1.0.0** which works o
 
 If you find this project useful, please consider:
 
-⭐ **Starring this repository** to help others discover it.
-
-☕ **Buying me a coffee** to support future development and maintenance.
-https://www.paypal.com/ncp/payment/T2SQ9HEMBEMHE
+⭐ **Starring this repository** to help others discover it and to support future development and maintenance.
 
 Your support is greatly appreciated and motivates me to continue improving this project.
 
